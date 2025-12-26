@@ -1,11 +1,21 @@
 import { ApiRequestError, TweetV2, TweetV2PaginableTimelineResult, TwitterApi, UserV2, ListV2, InlineErrorV2, EUploadMimeType } from 'twitter-api-v2';
 
+// Cloudflare Workers環境変数の型定義
+interface TwitterEnv {
+  TWITTER_API_KEY: string;
+  TWITTER_API_KEY_SECRET: string;
+  TWITTER_ACCESS_TOKEN: string;
+  TWITTER_ACCESS_TOKEN_SECRET: string;
+}
+
 /**
  * Twitter service for interacting with the Twitter API
+ * Supports both Node.js and Cloudflare Workers environments
  */
 export class TwitterService {
   private static instance: TwitterService;
   private client: TwitterApi | null = null;
+  private env: TwitterEnv | null = null;
 
   /**
    * Private constructor to enforce singleton pattern
@@ -23,31 +33,50 @@ export class TwitterService {
   }
 
   /**
+   * Initialize with Cloudflare Workers environment variables
+   * @param env The environment variables from Cloudflare Workers
+   */
+  public initializeWithEnv(env: TwitterEnv): void {
+    this.env = env;
+    this.client = null; // Reset client to force reinitialization
+  }
+
+  /**
    * Initialize the Twitter client with credentials
    * @returns The initialized Twitter client
    */
   public getClient(): TwitterApi {
     if (!this.client) {
-      if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_KEY_SECRET || 
-          !process.env.TWITTER_ACCESS_TOKEN || !process.env.TWITTER_ACCESS_TOKEN_SECRET) {
-        throw new Error('Twitter credentials are not properly configured in environment variables');
-      }
-      
-    //   console.log('Initializing Twitter client with credentials:', {
-    //     appKey: process.env.TWITTER_API_KEY,
-    //     appSecret: `${process.env.TWITTER_API_KEY_SECRET?.substring(0, 5)}...`,
-    //     accessToken: `${process.env.TWITTER_ACCESS_TOKEN?.substring(0, 5)}...`,
-    //     accessSecret: `${process.env.TWITTER_ACCESS_TOKEN_SECRET?.substring(0, 5)}...`,
-    //   });
-      
-      this.client = new TwitterApi({
-        appKey: process.env.TWITTER_API_KEY,
-        appSecret: process.env.TWITTER_API_KEY_SECRET,
-        accessToken: process.env.TWITTER_ACCESS_TOKEN,
-        accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
-    });
+      // Check for Cloudflare Workers environment
+      if (this.env) {
+        if (!this.env.TWITTER_API_KEY || !this.env.TWITTER_API_KEY_SECRET ||
+            !this.env.TWITTER_ACCESS_TOKEN || !this.env.TWITTER_ACCESS_TOKEN_SECRET) {
+          throw new Error('Twitter credentials are not properly configured in environment variables');
+        }
 
-    //  console.log('Twitter client initialized successfully');
+        this.client = new TwitterApi({
+          appKey: this.env.TWITTER_API_KEY,
+          appSecret: this.env.TWITTER_API_KEY_SECRET,
+          accessToken: this.env.TWITTER_ACCESS_TOKEN,
+          accessSecret: this.env.TWITTER_ACCESS_TOKEN_SECRET,
+        });
+      }
+      // Fallback to Node.js environment
+      else if (typeof process !== 'undefined' && process.env) {
+        if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_KEY_SECRET ||
+            !process.env.TWITTER_ACCESS_TOKEN || !process.env.TWITTER_ACCESS_TOKEN_SECRET) {
+          throw new Error('Twitter credentials are not properly configured in environment variables');
+        }
+
+        this.client = new TwitterApi({
+          appKey: process.env.TWITTER_API_KEY,
+          appSecret: process.env.TWITTER_API_KEY_SECRET,
+          accessToken: process.env.TWITTER_ACCESS_TOKEN,
+          accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
+        });
+      } else {
+        throw new Error('No environment available for Twitter credentials');
+      }
     }
     return this.client;
   }
@@ -170,9 +199,12 @@ export class TwitterService {
       const client = this.getClient();
       
       if (imageBase64) {
-        // Convert base64 to buffer
-        const buffer = Buffer.from(imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-        
+        // Convert base64 to Buffer (required by twitter-api-v2)
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+
+        // Convert to Buffer - works in both Node.js and Workers (Buffer is polyfilled)
+        const buffer = Buffer.from(base64Data, 'base64');
+
         // Determine image type from base64 string
         let mimeType = EUploadMimeType.Jpeg;
         if (imageBase64.includes('data:image/png')) {
@@ -182,13 +214,13 @@ export class TwitterService {
         } else if (imageBase64.includes('data:image/webp')) {
           mimeType = EUploadMimeType.Webp;
         }
-        
+
         // Upload the media
         const mediaId = await client.v2.uploadMedia(buffer, {
           media_type: mimeType,
           media_category: 'tweet_image'
         });
-        
+
         // Post tweet with media
         const tweet = await client.v2.tweet({
           text,
@@ -196,7 +228,7 @@ export class TwitterService {
             media_ids: [mediaId]
           }
         });
-        
+
         return tweet.data;
       } else {
         // Post text-only tweet

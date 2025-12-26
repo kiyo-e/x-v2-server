@@ -1,0 +1,26 @@
+name = "x-mcp-server-v2"
+main = "src/worker.ts"
+compatibility_date = "2025-12-26"
+
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables (secrets)
+# Run these commands to set secrets:
+# wrangler secret put TWITTER_API_KEY
+# wrangler secret put TWITTER_API_KEY_SECRET
+# wrangler secret put TWITTER_ACCESS_TOKEN
+# wrangler secret put TWITTER_ACCESS_TOKEN_SECRET
+
+# For local development, create a .dev.vars file with:
+# TWITTER_API_KEY=your_api_key
+# TWITTER_API_KEY_SECRET=your_api_secret
+# TWITTER_ACCESS_TOKEN=your_access_token
+# TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
+
+[build]
+command = "npm run build"
+
+# Optionally configure custom domains here
+# routes = [
+#   { pattern = "mcp.example.com", custom_domain = true }
+# ]

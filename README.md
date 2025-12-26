@@ -101,17 +101,108 @@ TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
 
 ## Development
 
-```
+### Local Development (Node.js)
 
+```bash
 npm i
 
 npm run build
 
 npx @modelcontextprotocol/inspector node dist/index.js
-
 ```
 
 Open http://127.0.0.1:6274 set up env, and interact with the tools.
+
+### Cloudflare Workers Deployment (Hono + MCP)
+
+This project can be deployed to Cloudflare Workers using:
+- **Hono** - Lightweight web framework
+- **@hono/mcp** - Streamable HTTP Transport for Model Context Protocol
+- **Twitter API v2** - Social media integration
+
+Note: Deployment commands are configured but actual deployment is not performed by default.
+
+#### Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Create a `.dev.vars` file for local development with your Twitter credentials:
+```
+TWITTER_API_KEY=your_api_key
+TWITTER_API_KEY_SECRET=your_api_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
+```
+
+#### Local Testing (Cloudflare Workers)
+
+```bash
+npm run dev:workers
+```
+
+This will start the Cloudflare Workers development server locally.
+
+#### Production Deployment (Manual)
+
+To deploy to Cloudflare Workers, you need to:
+
+1. Set up secrets in Cloudflare Workers:
+```bash
+wrangler secret put TWITTER_API_KEY
+wrangler secret put TWITTER_API_KEY_SECRET
+wrangler secret put TWITTER_ACCESS_TOKEN
+wrangler secret put TWITTER_ACCESS_TOKEN_SECRET
+```
+
+2. Deploy using:
+```bash
+npm run deploy:workers
+```
+
+Note: Make sure you have authenticated with Cloudflare CLI (`wrangler login`) before deploying.
+
+#### MCP Endpoints
+
+Once deployed, the following endpoints are available:
+
+**Health Check:**
+- `GET /` - Server status and information
+
+**MCP Streamable HTTP:**
+- `POST /mcp` - MCP protocol endpoint using Streamable HTTP Transport
+  - All MCP tools are accessible through this endpoint
+  - Supports standard MCP protocol communication
+
+#### Available MCP Tools
+
+The following tools are available through the `/mcp` endpoint:
+- `get_tweets_by_userid` - Get tweets by user ID
+- `get_tweet_by_id` - Get a tweet by ID
+- `get_user_mentions` - Get mentions for a user
+- `quote_tweet` - Quote a tweet with custom text
+- `reply_to_tweet` - Reply to a tweet
+- `post_tweet` - Post a new tweet (with optional image)
+- `like_tweet` - Like a tweet
+- `follow_user` - Follow a user
+- `unfollow_user` - Unfollow a user
+- `get_user_by_username` - Get user information by username
+- `search_tweets` - Search for tweets
+- `get_trending_topics` - Get trending topics
+- `create_list` - Create a Twitter list
+- `add_list_member` - Add a member to a list
+- `remove_list_member` - Remove a member from a list
+- `get_owned_lists` - Get all lists owned by authenticated user
+
+#### Connecting to the MCP Server
+
+To connect to this MCP server from a client application, use the Streamable HTTP transport pointing to your deployed URL:
+
+```
+https://your-worker.workers.dev/mcp
+```
 
 ## License
 This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
