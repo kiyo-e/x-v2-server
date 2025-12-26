@@ -12,6 +12,8 @@ interface TwitterEnv {
  * Twitter service for interacting with the Twitter API
  * Supports both Node.js and Cloudflare Workers environments
  */
+// Design doc: README.md (X(Twitter) V2 MCP Server overview and tool list)
+// Related classes: src/worker.ts and src/index.ts (MCP tool wiring/entry points)
 export class TwitterService {
   private static instance: TwitterService;
   private client: TwitterApi | null = null;
@@ -59,6 +61,8 @@ export class TwitterService {
           appSecret: this.env.TWITTER_API_KEY_SECRET,
           accessToken: this.env.TWITTER_ACCESS_TOKEN,
           accessSecret: this.env.TWITTER_ACCESS_TOKEN_SECRET,
+        }, {
+          compression: 'identity'
         });
       }
       // Fallback to Node.js environment
@@ -73,6 +77,8 @@ export class TwitterService {
           appSecret: process.env.TWITTER_API_KEY_SECRET,
           accessToken: process.env.TWITTER_ACCESS_TOKEN,
           accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
+        }, {
+          compression: 'identity'
         });
       } else {
         throw new Error('No environment available for Twitter credentials');
